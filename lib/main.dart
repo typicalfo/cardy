@@ -1,13 +1,29 @@
 import 'package:flutter/material.dart';
-import 'screens/edit_screen.dart';
+import 'models/business_card.dart';
+import 'screens/gallery_screen.dart';
+import 'screens/edit_card_screen.dart';
 import 'screens/card_screen.dart';
+import 'services/card_service.dart';
 
-void main() {
-  runApp(const BusinessCardApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Check for existing cards and default card
+  final hasCards = await CardService.hasCards();
+  final defaultCardId = await CardService.getDefaultCardId();
+  
+  runApp(BusinessCardApp(
+    initialRoute: _getInitialRoute(hasCards, defaultCardId),
+  ));
 }
 
 class BusinessCardApp extends StatelessWidget {
-  const BusinessCardApp({super.key});
+  const BusinessCardApp({
+    super.key,
+    required this.initialRoute,
+  });
+
+  final String initialRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -17,13 +33,44 @@ class BusinessCardApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      initialRoute: '/',
+      initialRoute: initialRoute,
       routes: {
-        '/': (context) => const EditScreen(),
+        '/': (context) => const GalleryScreen(),
+        '/gallery': (context) => const GalleryScreen(),
+        '/edit': (context) => const EditCardScreen(),
         '/card': (context) => const CardScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/card') {
+          final cardId = settings.arguments as String?;
+          if (cardId != null) {
+            return MaterialPageRoute(
+              builder: (context) => CardScreen(cardId: cardId),
+            );
+          }
+        }
+        if (settings.name == '/edit') {
+          final card = settings.arguments as BusinessCard?;
+          if (card != null) {
+            return MaterialPageRoute(
+              builder: (context) => EditCardScreen(card: card),
+            );
+          }
+        }
+        return null;
       },
     );
   }
+}
+
+String _getInitialRoute(bool hasCards, String? defaultCardId) {
+  if (!hasCards) {
+    return '/edit';
+  }
+  if (defaultCardId != null) {
+    return '/card/$defaultCardId';
+  }
+  return '/gallery';
 }
 
 class MyApp extends StatelessWidget {

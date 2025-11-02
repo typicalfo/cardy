@@ -1,40 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../models/business_card.dart';
+import '../services/card_service.dart';
 import '../utils/brightness.dart';
 
 class CardScreen extends StatefulWidget {
-  const CardScreen({super.key});
+  const CardScreen({super.key, this.cardId});
+
+  final String? cardId;
 
   @override
   State<CardScreen> createState() => _CardScreenState();
 }
 
 class _CardScreenState extends State<CardScreen> {
-  String name = '';
-  String title = '';
-  String company = '';
-  String phone = '';
-  String email = '';
-  String website = '';
+  BusinessCard? _card;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadCard();
     _setupDisplay();
   }
 
-  Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      name = prefs.getString('name') ?? '';
-      title = prefs.getString('title') ?? '';
-      company = prefs.getString('company') ?? '';
-      phone = prefs.getString('phone') ?? '';
-      email = prefs.getString('email') ?? '';
-      website = prefs.getString('website') ?? '';
-    });
+  Future<void> _loadCard() async {
+    if (widget.cardId != null) {
+      _card = await CardService.getCard(widget.cardId!);
+    } else {
+      _card = await CardService.getDefaultCard();
+    }
+    
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _setupDisplay() async {
@@ -56,6 +55,46 @@ class _CardScreenState extends State<CardScreen> {
     ]);
   }
 
+  Future<void> _deleteCard() async {
+    if (_card == null) return;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Card'),
+        content: Text('Are you sure you want to delete ${_card!.name}\'s business card?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await CardService.deleteCard(_card!.id);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  Future<void> _editCard() async {
+    if (_card == null) return;
+    Navigator.pushNamed(context, '/edit', arguments: _card);
+  }
+
+  Future<void> _setDefaultCard() async {
+    if (_card == null) return;
+    await CardService.setDefaultCardId(_card!.id);
+    _loadCard(); // Reload to update default indicator
+  }
+
   @override
   void dispose() {
     _resetDisplay();
@@ -67,96 +106,139 @@ class _CardScreenState extends State<CardScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Business Card'),
+        title: Text(_card?.name ?? 'Business Card'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-      ),
-      body: FutureBuilder<SharedPreferences>(
-        future: SharedPreferences.getInstance(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData) {
-            return const Center(child: Text('Error loading data'));
-          }
-
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.white,
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (name.isNotEmpty)
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
+        actions: [
+          if (_card != null) ...[
+            IconButton(
+              onPressed: _editCard,
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit Card',
+            ),
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                switch (value) {
+                  case 'delete':
+                    await _deleteCard();
+                    break;
+                  case 'default':
+                    await _setDefaultCard();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 16, color: Colors.red),
+                      const SizedBox(width: 8),
+                      const Text('Delete'),
+                    ],
                   ),
-                const SizedBox(height: 16),
-                if (title.isNotEmpty)
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      color: Colors.black,
+                ),
+                if (!_card!.isDefault)
+                  const PopupMenuItem(
+                    value: 'default',
+                    child: Row(
+                      children: [
+                        Icon(Icons.star, size: 16),
+                        const SizedBox(width: 8),
+                        const Text('Set as Default'),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                const SizedBox(height: 16),
-                if (company.isNotEmpty)
-                  Text(
-                    company,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                const SizedBox(height: 24),
-                if (phone.isNotEmpty)
-                  Text(
-                    phone,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                const SizedBox(height: 16),
-                if (email.isNotEmpty)
-                  Text(
-                    email,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                const SizedBox(height: 16),
-                if (website.isNotEmpty)
-                  Text(
-                    website,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
                   ),
               ],
             ),
-          );
-        },
+          ],
+        ],
       ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _card == null
+              ? const Center(
+                  child: Text(
+                    'Card not found',
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
+              : Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (_card!.name.isNotEmpty)
+                        Text(
+                          _card!.name,
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      const SizedBox(height: 16),
+                      if (_card!.title.isNotEmpty)
+                        Text(
+                          _card!.title,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      const SizedBox(height: 16),
+                      if (_card!.company.isNotEmpty)
+                        Text(
+                          _card!.company,
+                          style: const TextStyle(
+                            fontSize: 26,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      const SizedBox(height: 24),
+                      if (_card!.phone.isNotEmpty)
+                        Text(
+                          _card!.phone,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      const SizedBox(height: 16),
+                      if (_card!.email.isNotEmpty)
+                        Text(
+                          _card!.email,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      const SizedBox(height: 16),
+                      if (_card!.website.isNotEmpty)
+                        Text(
+                          _card!.website,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                    ],
+                  ),
+                ),
     );
   }
 }
