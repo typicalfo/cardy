@@ -9,6 +9,11 @@ class BusinessCard {
     this.phone = '',
     this.email = '',
     this.website = '',
+    this.websiteUrl = '',
+    this.enableVcardQr = true,
+    this.enableLinkQr = true,
+    this.enableEmailQr = true,
+    this.enablePhoneQr = true,
     this.createdAt,
     this.isDefault = false,
   });
@@ -20,6 +25,11 @@ class BusinessCard {
   final String phone;
   final String email;
   final String website;
+  final String websiteUrl;
+  final bool enableVcardQr;
+  final bool enableLinkQr;
+  final bool enableEmailQr;
+  final bool enablePhoneQr;
   final DateTime? createdAt;
   final bool isDefault;
 
@@ -31,6 +41,11 @@ class BusinessCard {
     String? phone,
     String? email,
     String? website,
+    String? websiteUrl,
+    bool? enableVcardQr,
+    bool? enableLinkQr,
+    bool? enableEmailQr,
+    bool? enablePhoneQr,
     DateTime? createdAt,
     bool? isDefault,
   }) {
@@ -42,6 +57,11 @@ class BusinessCard {
       phone: phone ?? this.phone,
       email: email ?? this.email,
       website: website ?? this.website,
+      websiteUrl: websiteUrl ?? this.websiteUrl,
+      enableVcardQr: enableVcardQr ?? this.enableVcardQr,
+      enableLinkQr: enableLinkQr ?? this.enableLinkQr,
+      enableEmailQr: enableEmailQr ?? this.enableEmailQr,
+      enablePhoneQr: enablePhoneQr ?? this.enablePhoneQr,
       createdAt: createdAt ?? this.createdAt,
       isDefault: isDefault ?? this.isDefault,
     );
@@ -56,6 +76,11 @@ class BusinessCard {
       'phone': phone,
       'email': email,
       'website': website,
+      'websiteUrl': websiteUrl,
+      'enableVcardQr': enableVcardQr,
+      'enableLinkQr': enableLinkQr,
+      'enableEmailQr': enableEmailQr,
+      'enablePhoneQr': enablePhoneQr,
       'createdAt': createdAt?.toIso8601String(),
       'isDefault': isDefault,
     };
@@ -70,6 +95,11 @@ class BusinessCard {
       phone: json['phone'] as String? ?? '',
       email: json['email'] as String? ?? '',
       website: json['website'] as String? ?? '',
+      websiteUrl: json['websiteUrl'] as String? ?? '',
+      enableVcardQr: json['enableVcardQr'] as bool? ?? true,
+      enableLinkQr: json['enableLinkQr'] as bool? ?? true,
+      enableEmailQr: json['enableEmailQr'] as bool? ?? true,
+      enablePhoneQr: json['enablePhoneQr'] as bool? ?? true,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt'] as String)
           : null,
